@@ -5,6 +5,7 @@ import { Input } from '@heroui/input';
 import { Button } from '@heroui/button';
 import { Card, CardHeader, CardBody } from '@heroui/card';
 import { Chip } from '@heroui/chip';
+import PriceChart from '../../components/PriceChart';
 
 export const meta: MetaFunction = () => {
 	return [
@@ -214,6 +215,32 @@ export default function TradingIndex() {
 													</div>
 												</div>
 											</div>
+
+											{/* Price Chart */}
+											{fetcher.data.analysis.chart_data &&
+												fetcher.data.analysis.chart_data.length > 0 && (
+													<Card className='p-4'>
+														<PriceChart
+															data={fetcher.data.analysis.chart_data}
+															symbol={fetcher.data.analysis.symbol}
+														/>
+													</Card>
+												)}
+
+											{/* AI Analysis - Chart Description */}
+											{fetcher.data.analysis.ai_analysis?.chart_description && (
+												<div className='p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg'>
+													<h5 className='font-semibold text-blue-800 dark:text-blue-200 mb-2'>
+														Chart Analysis
+													</h5>
+													<p className='text-sm leading-relaxed'>
+														{
+															fetcher.data.analysis.ai_analysis
+																.chart_description
+														}
+													</p>
+												</div>
+											)}
 
 											{/* Key Metrics */}
 											{fetcher.data.analysis.key_metrics && (

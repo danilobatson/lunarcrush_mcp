@@ -37,6 +37,7 @@ export interface TradingAnalysis {
 		key_factors: string[];
 	};
 	timestamp: string;
+	chart_data?: [];
 }
 
 interface GeminiResponse {
@@ -135,6 +136,8 @@ Based on the available tools, decide which tools to call and with what parameter
 2. Social sentiment metrics
 3. Historical performance data
 4. Ranking and positioning data
+5. A chart of the last week's price history
+6. Any other relevant data for trading analysis
 
 Respond with a JSON array of tool calls in this exact format:
 [
@@ -282,6 +285,9 @@ Based on the above data from the MCP tools, provide a detailed trading analysis.
 3. POSITIONING DATA:
    - AltRank and market positioning
    - Relative performance vs other cryptocurrencies
+4. HISTORICAL PERFORMANCE:
+   - Price trends over the last week
+   - This will be used to create a chart
 
 REQUIRED JSON RESPONSE FORMAT:
 {
@@ -305,7 +311,8 @@ REQUIRED JSON RESPONSE FORMAT:
     "pros": ["Positive factor 1", "Positive factor 2", "etc"],
     "cons": ["Risk factor 1", "Risk factor 2", "etc"],
     "key_factors": ["Important factor to monitor 1", "Important factor 2", "etc"]
-  }
+  },
+  chart_data: []
 }
 
 IMPORTANT:
@@ -350,7 +357,8 @@ IMPORTANT:
 				key_metrics: analysis.key_metrics || this.extractMetrics(cryptoData),
 				ai_analysis:
 					analysis.ai_analysis || analysis.reasoning || 'AI analysis completed',
-				timestamp: new Date().toISOString(),
+        timestamp: new Date().toISOString(),
+        chart_data: analysis.chart_data || [],
 			};
 		} catch (error) {
 			console.error('❌ Error parsing Gemini response:', error);
@@ -364,7 +372,8 @@ IMPORTANT:
 				social_sentiment: 'neutral',
 				key_metrics: this.extractMetrics(cryptoData),
 				ai_analysis: 'Unable to complete full AI analysis. Please try again.',
-				timestamp: new Date().toISOString(),
+        timestamp: new Date().toISOString(),
+        chart_data: [],
 			};
 		}
 	}
@@ -382,7 +391,8 @@ IMPORTANT:
 			volume_24h: cryptoData?.volume_24h || null,
 			mentions: cryptoData?.mentions || null,
 			engagements: cryptoData?.engagements || cryptoData?.interactions || null,
-			creators: cryptoData?.creators || null,
+      creators: cryptoData?.creators || null,
+
 		};
 	}
 
