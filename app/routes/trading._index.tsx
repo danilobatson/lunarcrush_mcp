@@ -161,16 +161,146 @@ export default function TradingIndex() {
 							</Card>
 						)}
 
-						{/* Results Display */}
+						{/* Results Display - Enhanced for new analysis format */}
 						{fetcher.data && (
 							<Card className='mt-6 p-6'>
 								<CardHeader>
-									<h3 className='text-xl font-semibold'>Analysis Results</h3>
+									<h3 className='text-xl font-semibold'>
+										{fetcher.data.success
+											? 'AI Trading Analysis'
+											: 'Analysis Error'}
+									</h3>
 								</CardHeader>
 								<CardBody>
-									<pre className='text-sm bg-gray-100 dark:bg-gray-800 p-4 rounded overflow-auto'>
-										{JSON.stringify(fetcher.data, null, 2)}
-									</pre>
+									{fetcher.data.success && fetcher.data.analysis ? (
+										<div className='space-y-6'>
+											{/* Trading Recommendation */}
+											<div className='text-center p-6 rounded-lg bg-gradient-to-r from-blue-50 to-green-50 dark:from-blue-900/20 dark:to-green-900/20'>
+												<div className='flex items-center justify-center gap-4 mb-4'>
+													<span className='text-2xl font-bold text-gray-800 dark:text-white'>
+														{fetcher.data.analysis.symbol}
+													</span>
+													<Chip
+														size='lg'
+														color={
+															fetcher.data.analysis.recommendation === 'BUY'
+																? 'success'
+																: fetcher.data.analysis.recommendation ===
+																  'SELL'
+																? 'danger'
+																: 'warning'
+														}
+														variant='solid'
+														className='text-white font-bold'>
+														{fetcher.data.analysis.recommendation}
+													</Chip>
+												</div>
+												<div className='flex items-center justify-center gap-6 text-sm'>
+													<div>
+														<span className='text-gray-600 dark:text-gray-400'>
+															Confidence:
+														</span>
+														<span className='ml-2 font-semibold'>
+															{fetcher.data.analysis.confidence}%
+														</span>
+													</div>
+													<div>
+														<span className='text-gray-600 dark:text-gray-400'>
+															Social Sentiment:
+														</span>
+														<span className='ml-2 font-semibold capitalize'>
+															{fetcher.data.analysis.social_sentiment}
+														</span>
+													</div>
+												</div>
+											</div>
+
+											{/* Key Metrics */}
+											{fetcher.data.analysis.key_metrics && (
+												<div>
+													<h4 className='text-lg font-semibold mb-3'>
+														Key Metrics
+													</h4>
+													<div className='grid grid-cols-2 md:grid-cols-3 gap-4'>
+														{Object.entries(fetcher.data.analysis.key_metrics)
+															.filter(([, value]) => value !== null)
+															.map(([key, value]) => (
+																<div
+																	key={key}
+																	className='p-3 bg-gray-50 dark:bg-gray-800 rounded-lg'>
+																	<div className='text-xs text-gray-600 dark:text-gray-400 uppercase tracking-wide'>
+																		{key.replace(/_/g, ' ')}
+																	</div>
+																	<div className='text-sm font-semibold mt-1'>
+																		{typeof value === 'number'
+																			? key.includes('price') ||
+																			  key.includes('cap')
+																				? `$${value.toLocaleString()}`
+																				: value.toLocaleString()
+																			: value}
+																	</div>
+																</div>
+															))}
+													</div>
+												</div>
+											)}
+
+											{/* AI Analysis */}
+											<div>
+												<h4 className='text-lg font-semibold mb-3'>
+													AI Analysis
+												</h4>
+												<div className='p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg'>
+													<p className='text-sm leading-relaxed'>
+														{fetcher.data.analysis.reasoning}
+													</p>
+													{fetcher.data.analysis.ai_analysis &&
+														fetcher.data.analysis.ai_analysis !==
+															fetcher.data.analysis.reasoning && (
+															<div className='mt-3 pt-3 border-t border-blue-200 dark:border-blue-700'>
+																<p className='text-sm leading-relaxed'>
+																	{fetcher.data.analysis.ai_analysis}
+																</p>
+															</div>
+														)}
+												</div>
+											</div>
+
+											{/* Technical Details */}
+											<details className='text-sm'>
+												<summary className='cursor-pointer font-semibold text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-200'>
+													Technical Details
+												</summary>
+												<div className='mt-3 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg'>
+													<div className='grid grid-cols-2 gap-4 text-xs'>
+														<div>
+															<span className='text-gray-600 dark:text-gray-400'>
+																Timestamp:
+															</span>
+															<div className='font-mono'>
+																{new Date(
+																	fetcher.data.analysis.timestamp
+																).toLocaleString()}
+															</div>
+														</div>
+														<div>
+															<span className='text-gray-600 dark:text-gray-400'>
+																Analysis Method:
+															</span>
+															<div>Gemini AI + LunarCrush MCP</div>
+														</div>
+													</div>
+												</div>
+											</details>
+										</div>
+									) : (
+										<div className='text-red-600 dark:text-red-400'>
+											<p className='font-semibold'>Error:</p>
+											<p className='text-sm'>
+												{fetcher.data.error || 'Unknown error occurred'}
+											</p>
+										</div>
+									)}
 								</CardBody>
 							</Card>
 						)}

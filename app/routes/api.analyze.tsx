@@ -1,14 +1,14 @@
 /**
  * API Route: Analyze Cryptocurrency
  *
- * This route demonstrates the power of MCP + AI integration:
- * 1. Uses LunarCrush MCP for real-time social data
- * 2. Processes data with Google Gemini AI
- * 3. Returns actionable trading signals
+ * This route demonstrates the NEW architecture:
+ * 1. User queries for a coin (e.g., "BTC")
+ * 2. Google Gemini AI orchestrates which LunarCrush MCP tools to use
+ * 3. Gemini calls MCP tools, gathers data, and provides comprehensive analysis
+ * 4. Returns complete trading analysis with AI reasoning
  */
 
 import { json, type ActionFunctionArgs } from '@remix-run/node';
-import LunarCrushMCPService from '~/services/lunarcrush-mcp';
 import GeminiAIService from '~/services/gemini-ai';
 
 export async function action({ request }: ActionFunctionArgs) {
@@ -28,37 +28,27 @@ export async function action({ request }: ActionFunctionArgs) {
 			return json({ error: 'API keys not configured' }, { status: 500 });
 		}
 
-		console.log(`🚀 Starting analysis for ${symbol.toUpperCase()}`);
+		console.log(
+			`🚀 Starting AI-orchestrated analysis for ${symbol.toUpperCase()}`
+		);
 
-		// Initialize services
-		const mcpService = new LunarCrushMCPService(lunarcrushKey);
-		const aiService = new GeminiAIService(geminiKey);
+		// Initialize Gemini AI service (which handles MCP internally)
+		const aiService = new GeminiAIService(geminiKey, lunarcrushKey);
 
-		try {
-			// Step 1: Connect to LunarCrush MCP
-			await mcpService.initializeConnection();
+		// Let Gemini orchestrate the entire analysis
+		const analysis = await aiService.analyzeCryptocurrency(symbol);
 
-			// Step 2: Fetch cryptocurrency data via MCP
-			const cryptoData = await mcpService.getCryptocurrencyData(symbol);
+		console.log(
+			`✅ AI-orchestrated analysis complete for ${symbol}: ${analysis.recommendation}`
+		);
 
-			// Step 3: Analyze with Gemini AI
-			const tradingSignal = await aiService.analyzeCrypto(cryptoData);
-
-			console.log(
-				`✅ Analysis complete for ${symbol}: ${tradingSignal.recommendation}`
-			);
-
-			return json({
-				success: true,
-				signal: tradingSignal,
-				timestamp: new Date().toISOString(),
-			});
-		} finally {
-			// Always clean up MCP connection
-			mcpService.disconnect();
-		}
+		return json({
+			success: true,
+			analysis: analysis,
+			timestamp: new Date().toISOString(),
+		});
 	} catch (error) {
-		console.error('❌ Analysis error:', error);
+		console.error('❌ AI orchestration error:', error);
 
 		return json(
 			{
