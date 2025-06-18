@@ -61,37 +61,57 @@ export default function PriceChart({ data, symbol }: PriceChartProps) {
 
 	return (
 		<div className='w-full'>
-			{/* Header with price info */}
-			<div className='flex justify-between items-center mb-4'>
-				<h4 className='text-lg font-semibold'>{symbol} Price Chart</h4>
+			{/* Enhanced Header with price info */}
+			<div className='flex justify-between items-start mb-6'>
+				<div>
+					<h4 className='text-2xl font-bold text-white mb-2 flex items-center gap-3'>
+						<div className='w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center'>
+							<span className='text-white text-sm'>📈</span>
+						</div>
+						{symbol} Price Chart
+					</h4>
+					<p className='text-slate-400'>
+						Interactive price movement visualization
+					</p>
+				</div>
 				<div className='text-right'>
-					<div className='text-2xl font-bold'>
+					<div className='text-3xl font-bold text-white mb-1'>
 						$
 						{lastPrice.toLocaleString(undefined, {
 							minimumFractionDigits: 2,
 							maximumFractionDigits: 2,
 						})}
 					</div>
-					<div
-						className={`text-sm font-medium ${
-							isPositive ? 'text-green-600' : 'text-red-600'
-						}`}>
-						{isPositive ? '+' : ''}
-						{priceChangePercent.toFixed(2)}% ({isPositive ? '+' : ''}$
-						{priceChange.toFixed(2)})
+					<div className='flex items-center gap-2'>
+						<div
+							className={`px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1 ${
+								isPositive
+									? 'bg-green-500/20 text-green-400 border border-green-500/30'
+									: 'bg-red-500/20 text-red-400 border border-red-500/30'
+							}`}>
+							<span className={isPositive ? '↗' : '↘'}></span>
+							{isPositive ? '+' : ''}
+							{priceChangePercent.toFixed(2)}%
+						</div>
+						<div
+							className={`text-sm font-medium ${
+								isPositive ? 'text-green-400' : 'text-red-400'
+							}`}>
+							({isPositive ? '+' : ''}${priceChange.toFixed(2)})
+						</div>
 					</div>
 				</div>
 			</div>
 
-			{/* Chart */}
-			<div className='h-80 w-full'>
+			{/* Enhanced Chart */}
+			<div className='h-96 w-full bg-slate-900/30 rounded-xl p-4 border border-slate-700/30'>
 				<ResponsiveContainer width='100%' height='100%'>
 					<AreaChart
 						data={optimizedData}
 						margin={{ top: 10, right: 30, left: 20, bottom: 20 }}>
 						<defs>
 							<linearGradient id='colorGradient' x1='0' y1='0' x2='0' y2='1'>
-								<stop offset='5%' stopColor={gradientColor} stopOpacity={0.3} />
+								<stop offset='5%' stopColor={gradientColor} stopOpacity={0.4} />
 								<stop
 									offset='95%'
 									stopColor={gradientColor}
@@ -99,10 +119,14 @@ export default function PriceChart({ data, symbol }: PriceChartProps) {
 								/>
 							</linearGradient>
 						</defs>
-						<CartesianGrid strokeDasharray='3 3' opacity={0.3} />
+						<CartesianGrid
+							strokeDasharray='3 3'
+							stroke='#475569'
+							opacity={0.2}
+						/>
 						<XAxis
 							dataKey='date'
-							tick={{ fontSize: 11 }}
+							tick={{ fontSize: 12, fill: '#94a3b8' }}
 							axisLine={false}
 							tickLine={false}
 							tickFormatter={(date) => {
@@ -118,7 +142,7 @@ export default function PriceChart({ data, symbol }: PriceChartProps) {
 							}}
 						/>
 						<YAxis
-							tick={{ fontSize: 11 }}
+							tick={{ fontSize: 12, fill: '#94a3b8' }}
 							axisLine={false}
 							tickLine={false}
 							domain={['dataMin - 50', 'dataMax + 50']}
@@ -131,10 +155,13 @@ export default function PriceChart({ data, symbol }: PriceChartProps) {
 						/>
 						<Tooltip
 							contentStyle={{
-								backgroundColor: 'rgba(255, 255, 255, 0.95)',
-								border: '1px solid #e5e7eb',
-								borderRadius: '8px',
-								boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
+								backgroundColor: 'rgba(15, 23, 42, 0.95)',
+								border: '1px solid rgba(148, 163, 184, 0.3)',
+								borderRadius: '12px',
+								boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+								color: '#ffffff',
+								fontSize: '14px',
+								fontWeight: '500',
 							}}
 							labelFormatter={(date) => {
 								try {
@@ -165,10 +192,11 @@ export default function PriceChart({ data, symbol }: PriceChartProps) {
 							fill='url(#colorGradient)'
 							dot={false}
 							activeDot={{
-								r: 6,
+								r: 8,
 								fill: lineColor,
-								strokeWidth: 2,
+								strokeWidth: 3,
 								stroke: '#ffffff',
+								filter: 'drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1))',
 							}}
 						/>
 					</AreaChart>
