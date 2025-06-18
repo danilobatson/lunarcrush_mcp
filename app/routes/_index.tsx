@@ -1,10 +1,10 @@
-import { useState } from "react";
-import { Input } from "@heroui/input";
-import { Button } from "@heroui/button";
-import { Card, CardHeader, CardBody } from "@heroui/card";
-import { Chip } from "@heroui/chip";
+import { Code } from "@heroui/code";
+import { Snippet } from "@heroui/snippet";
+import { Link } from "@heroui/link";
 import type { MetaFunction } from "@remix-run/node";
 import { title, subtitle } from "components/primitives";
+import { Navbar } from "components/navbar";
+import { Link } from "@heroui/link";
 
 export const meta: MetaFunction = () => {
   return [

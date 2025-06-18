@@ -1,10 +1,10 @@
 import { useState } from "react";
+import { useFetcher } from "@remix-run/react";
+import { json, type MetaFunction } from "@remix-run/node";
 import { Input } from "@heroui/input";
 import { Button } from "@heroui/button";
 import { Card, CardHeader, CardBody } from "@heroui/card";
 import { Chip } from "@heroui/chip";
-import type { MetaFunction } from "@remix-run/node";
-import { title, subtitle } from "components/primitives";
 
 export const meta: MetaFunction = () => {
   return [
@@ -13,25 +13,26 @@ export const meta: MetaFunction = () => {
   ];
 };
 
+export async function loader() {
+  return json({ message: "Trading page loaded successfully" });
+}
+
 export default function TradingIndex() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [results, setResults] = useState(null);
+  const fetcher = useFetcher();
+  
+  const loading = fetcher.state === "submitting";
 
-  const handleSearch = async () => {
+  const handleSearch = () => {
     if (!searchTerm.trim()) return;
     
-    setLoading(true);
-    try {
-      // TODO: Implement MCP search
-      console.log("Searching for:", searchTerm);
-      // Placeholder for now
-      await new Promise(resolve => setTimeout(resolve, 1000));
-    } catch (error) {
-      console.error("Search error:", error);
-    } finally {
-      setLoading(false);
-    }
+    const formData = new FormData();
+    formData.append("symbol", searchTerm.trim());
+    
+    fetcher.submit(formData, {
+      method: "post",
+      action: "/api/analyze"
+    });
   };
 
   return (
@@ -39,10 +40,10 @@ export default function TradingIndex() {
       {/* Hero Section */}
       <section className="flex flex-col items-center justify-center px-6 py-20 text-center">
         <div className="max-w-4xl">
-          <h1 className={title({ size: "lg", class: "mb-4" })}>
+          <h1 className="text-4xl font-bold mb-4">
             Social Intelligence Trading
           </h1>
-          <h2 className={subtitle({ class: "mb-8 text-lg" })}>
+          <h2 className="text-lg text-gray-600 mb-8">
             AI-powered trading signals using <span className="text-blue-600 font-semibold">LunarCrush MCP</span> and <span className="text-green-600 font-semibold">Google Gemini</span>
           </h2>
           
@@ -122,13 +123,30 @@ export default function TradingIndex() {
               </CardBody>
             </Card>
 
-            {/* Results Placeholder */}
+            {/* Loading State */}
             {loading && (
               <Card className="mt-6 p-6">
                 <div className="text-center">
                   <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-4"></div>
-                  <p>Analyzing social sentiment and market data...</p>
+                  <p>Analyzing social sentiment and market data via MCP...</p>
+                  <p className="text-sm text-gray-600 mt-2">
+                    🔄 Connecting to LunarCrush MCP → 📊 Fetching data → 🤖 AI Analysis
+                  </p>
                 </div>
+              </Card>
+            )}
+
+            {/* Results Display */}
+            {fetcher.data && (
+              <Card className="mt-6 p-6">
+                <CardHeader>
+                  <h3 className="text-xl font-semibold">Analysis Results</h3>
+                </CardHeader>
+                <CardBody>
+                  <pre className="text-sm bg-gray-100 dark:bg-gray-800 p-4 rounded overflow-auto">
+                    {JSON.stringify(fetcher.data, null, 2)}
+                  </pre>
+                </CardBody>
               </Card>
             )}
           </div>
@@ -139,6 +157,9 @@ export default function TradingIndex() {
       <footer className="text-center py-8 px-6 border-t border-gray-200 dark:border-gray-700">
         <p className="text-sm text-gray-600 dark:text-gray-400">
           Powered by <span className="font-semibold">LunarCrush MCP</span> • <span className="font-semibold">Google Gemini</span> • <span className="font-semibold">Model Context Protocol</span>
+        </p>
+        <p className="text-xs text-gray-500 mt-2">
+          Educational demonstration of MCP protocol benefits vs traditional API integration
         </p>
       </footer>
     </div>
