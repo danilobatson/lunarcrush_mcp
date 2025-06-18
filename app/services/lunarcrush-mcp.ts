@@ -311,7 +311,9 @@ class LunarCrushMCPService {
 	 */
 	async getCryptocurrencies(limit: number = 100): Promise<any> {
 		try {
-			console.log(`📊 Fetching cryptocurrencies data (limit: ${limit}) via MCP...`);
+			console.log(
+				`📊 Fetching cryptocurrencies data (limit: ${limit}) via MCP...`
+			);
 
 			const result = await this.makeRequest('tools/call', {
 				name: 'Cryptocurrencies',
@@ -402,7 +404,10 @@ class LunarCrushMCPService {
 				timeSeries: timeSeriesResult,
 			};
 		} catch (error) {
-			console.error(`❌ Error getting comprehensive data for ${symbol}:`, error);
+			console.error(
+				`❌ Error getting comprehensive data for ${symbol}:`,
+				error
+			);
 			throw error;
 		}
 	}
@@ -436,7 +441,10 @@ class LunarCrushMCPService {
 				arguments: args,
 			});
 
-			console.log(`✅ Tool ${toolName} result:`, JSON.stringify(result, null, 2));
+			console.log(
+				`✅ Tool ${toolName} result:`,
+				JSON.stringify(result, null, 2)
+			);
 			return result;
 		} catch (error) {
 			console.error(`❌ Error calling tool ${toolName}:`, error);

@@ -1,9 +1,9 @@
 /**
  * Google Gemini AI Service with LunarCrush MCP Integration
  *
- * This service uses Google Gemini as the orchestrator to decide which 
+ * This service uses Google Gemini as the orchestrator to decide which
  * LunarCrush MCP tools to call and generate comprehensive trading analysis.
- * 
+ *
  * Architecture:
  * 1. User queries for a coin (e.g., "BTC")
  * 2. Gemini AI decides which MCP tools to use
@@ -26,8 +26,16 @@ export interface TradingAnalysis {
 		social_dominance?: number;
 		market_cap?: number;
 		volume_24h?: number;
+		mentions?: number;
+		engagements?: number;
+		creators?: number;
 	};
-	ai_analysis: string;
+	ai_analysis: {
+		summary: string;
+		pros: string[];
+		cons: string[];
+		key_factors: string[];
+	};
 	timestamp: string;
 }
 
@@ -57,7 +65,9 @@ export default class GeminiAIService {
 	 */
 	async analyzeCryptocurrency(symbol: string): Promise<TradingAnalysis> {
 		try {
-			console.log(`🚀 Starting AI-orchestrated analysis for ${symbol.toUpperCase()}`);
+			console.log(
+				`🚀 Starting AI-orchestrated analysis for ${symbol.toUpperCase()}`
+			);
 
 			// Initialize MCP connection
 			await this.mcpService.initializeConnection();
@@ -82,27 +92,36 @@ export default class GeminiAIService {
 		// Step 1: Let Gemini discover available tools
 		console.log('🔍 Letting Gemini discover available MCP tools...');
 		const availableTools = await this.mcpService.listAvailableTools();
-		
+
 		// Step 2: Let Gemini decide which tools to use and how
 		console.log(`🤖 Letting Gemini choose tools for ${symbol} analysis...`);
-		const orchestrationPrompt = this.createOrchestrationPrompt(symbol, availableTools);
+		const orchestrationPrompt = this.createOrchestrationPrompt(
+			symbol,
+			availableTools
+		);
 		const orchestrationResponse = await this.callGemini(orchestrationPrompt);
-		
+
 		// Step 3: Execute Gemini's tool choices to gather data
-		const gatheredData = await this.executeGeminiToolChoices(symbol, orchestrationResponse);
-		
+		const gatheredData = await this.executeGeminiToolChoices(
+			symbol,
+			orchestrationResponse
+		);
+
 		// Step 4: Let Gemini analyze all gathered data
 		console.log(`📊 Gemini analyzing gathered data for ${symbol}...`);
 		const analysisPrompt = this.createAnalysisPrompt(symbol, gatheredData);
 		const analysisResponse = await this.callGemini(analysisPrompt);
-		
+
 		return this.parseAnalysisResponse(analysisResponse, symbol, gatheredData);
 	}
 
 	/**
 	 * Create orchestration prompt for Gemini to choose tools
 	 */
-	private createOrchestrationPrompt(symbol: string, availableTools: any): string {
+	private createOrchestrationPrompt(
+		symbol: string,
+		availableTools: Record<string, unknown>
+	): string {
 		return `
 You are a cryptocurrency analyst. I need you to analyze ${symbol.toUpperCase()} using the available LunarCrush MCP tools.
 
@@ -133,9 +152,13 @@ Be specific with parameters. For example, if you need to find ${symbol} in a lis
 	/**
 	 * Execute Gemini's chosen tool calls
 	 */
-	private async executeGeminiToolChoices(symbol: string, orchestrationResponse: any): Promise<any> {
+	private async executeGeminiToolChoices(
+		symbol: string,
+		orchestrationResponse: GeminiResponse
+	): Promise<Record<string, unknown>> {
 		try {
-			const responseText = orchestrationResponse.candidates[0]?.content?.parts[0]?.text;
+			const responseText =
+				orchestrationResponse.candidates[0]?.content?.parts[0]?.text;
 			console.log('🤖 Gemini orchestration response:', responseText);
 
 			// Extract JSON array from response
@@ -146,21 +169,24 @@ Be specific with parameters. For example, if you need to find ${symbol} in a lis
 			}
 
 			const toolCalls = JSON.parse(jsonMatch[0]);
-			const gatheredData: any = {
+			const gatheredData: Record<string, unknown> = {
 				symbol: symbol.toUpperCase(),
-				toolResults: []
+				toolResults: [],
 			};
 
 			// Execute each tool call
 			for (const toolCall of toolCalls) {
 				try {
 					console.log(`🛠️ Executing: ${toolCall.tool} - ${toolCall.reason}`);
-					const result = await this.mcpService.callTool(toolCall.tool, toolCall.args);
+					const result = await this.mcpService.callTool(
+						toolCall.tool,
+						toolCall.args
+					);
 					gatheredData.toolResults.push({
 						tool: toolCall.tool,
 						args: toolCall.args,
 						reason: toolCall.reason,
-						result: result
+						result: result,
 					});
 				} catch (error) {
 					console.error(`❌ Tool ${toolCall.tool} failed:`, error);
@@ -168,7 +194,7 @@ Be specific with parameters. For example, if you need to find ${symbol} in a lis
 						tool: toolCall.tool,
 						args: toolCall.args,
 						reason: toolCall.reason,
-						error: error instanceof Error ? error.message : 'Unknown error'
+						error: error instanceof Error ? error.message : 'Unknown error',
 					});
 				}
 			}
@@ -183,28 +209,41 @@ Be specific with parameters. For example, if you need to find ${symbol} in a lis
 	/**
 	 * Fallback tool calls if orchestration fails
 	 */
-	private async executeFallbackToolCalls(symbol: string): Promise<any> {
+	private async executeFallbackToolCalls(
+		symbol: string
+	): Promise<Record<string, unknown>> {
 		console.log('🔄 Using fallback tool calls...');
-		const gatheredData: any = {
+		const gatheredData: Record<string, unknown> = {
 			symbol: symbol.toUpperCase(),
-			toolResults: []
+			toolResults: [],
 		};
 
 		// Try common tools that should exist
 		const fallbackCalls = [
-			{ tool: 'cryptocurrencies', args: {}, reason: 'Get list of cryptocurrencies' },
-			{ tool: 'topic', args: { topic: symbol.toLowerCase() }, reason: 'Get topic data' }
+			{
+				tool: 'cryptocurrencies',
+				args: {},
+				reason: 'Get list of cryptocurrencies',
+			},
+			{
+				tool: 'topic',
+				args: { topic: symbol.toLowerCase() },
+				reason: 'Get topic data',
+			},
 		];
 
 		for (const toolCall of fallbackCalls) {
 			try {
 				console.log(`🛠️ Fallback: ${toolCall.tool} - ${toolCall.reason}`);
-				const result = await this.mcpService.callTool(toolCall.tool, toolCall.args);
+				const result = await this.mcpService.callTool(
+					toolCall.tool,
+					toolCall.args
+				);
 				gatheredData.toolResults.push({
 					tool: toolCall.tool,
 					args: toolCall.args,
 					reason: toolCall.reason,
-					result: result
+					result: result,
 				});
 			} catch (error) {
 				console.error(`❌ Fallback tool ${toolCall.tool} failed:`, error);
@@ -217,7 +256,10 @@ Be specific with parameters. For example, if you need to find ${symbol} in a lis
 	/**
 	 * Create analysis prompt with gathered data
 	 */
-	private createAnalysisPrompt(symbol: string, gatheredData: any): string {
+	private createAnalysisPrompt(
+		symbol: string,
+		gatheredData: Record<string, unknown>
+	): string {
 		return `
 You are an expert cryptocurrency analyst. Analyze the following data for ${symbol.toUpperCase()} gathered from LunarCrush MCP tools and provide a comprehensive trading recommendation.
 
@@ -245,7 +287,7 @@ REQUIRED JSON RESPONSE FORMAT:
 {
   "recommendation": "BUY|SELL|HOLD",
   "confidence": 0-100,
-  "reasoning": "Detailed explanation based on the MCP data gathered",
+  "reasoning": "Brief explanation of the recommendation",
   "social_sentiment": "bullish|bearish|neutral",
   "key_metrics": {
     "price": "actual price from MCP data",
@@ -253,19 +295,35 @@ REQUIRED JSON RESPONSE FORMAT:
     "alt_rank": "rank from data",
     "social_dominance": "dominance from data",
     "market_cap": "cap from data",
-    "volume_24h": "volume from data"
+    "volume_24h": "volume from data",
+    "mentions": "mentions from data",
+    "engagements": "engagements/interactions from data",
+    "creators": "creators from data"
   },
-  "ai_analysis": "Comprehensive analysis based on the actual MCP tool results"
+  "ai_analysis": {
+    "summary": "1-2 sentence overview of the analysis",
+    "pros": ["Positive factor 1", "Positive factor 2", "etc"],
+    "cons": ["Risk factor 1", "Risk factor 2", "etc"],
+    "key_factors": ["Important factor to monitor 1", "Important factor 2", "etc"]
+  }
 }
 
-Important: Use ONLY the actual data returned from the MCP tools. Do not use placeholder or demo data.
+IMPORTANT:
+- Use ONLY actual data from the MCP tools, not placeholder values
+- Make the analysis beginner-friendly and educational
+- Focus on explaining WHY the recommendation is made
+- Extract real metrics from the gathered data
 `;
 	}
 
 	/**
 	 * Parse Gemini's analysis response and format for our app
 	 */
-	private parseAnalysisResponse(response: GeminiResponse, symbol: string, cryptoData: any): TradingAnalysis {
+	private parseAnalysisResponse(
+		response: GeminiResponse,
+		symbol: string,
+		cryptoData: Record<string, unknown>
+	): TradingAnalysis {
 		try {
 			const text = response.candidates[0]?.content?.parts[0]?.text;
 			if (!text) {
@@ -290,12 +348,13 @@ Important: Use ONLY the actual data returned from the MCP tools. Do not use plac
 				reasoning: analysis.reasoning || 'Analysis completed',
 				social_sentiment: analysis.social_sentiment || 'neutral',
 				key_metrics: analysis.key_metrics || this.extractMetrics(cryptoData),
-				ai_analysis: analysis.ai_analysis || analysis.reasoning || 'AI analysis completed',
-				timestamp: new Date().toISOString()
+				ai_analysis:
+					analysis.ai_analysis || analysis.reasoning || 'AI analysis completed',
+				timestamp: new Date().toISOString(),
 			};
 		} catch (error) {
 			console.error('❌ Error parsing Gemini response:', error);
-			
+
 			// Fallback response
 			return {
 				symbol: symbol.toUpperCase(),
@@ -305,7 +364,7 @@ Important: Use ONLY the actual data returned from the MCP tools. Do not use plac
 				social_sentiment: 'neutral',
 				key_metrics: this.extractMetrics(cryptoData),
 				ai_analysis: 'Unable to complete full AI analysis. Please try again.',
-				timestamp: new Date().toISOString()
+				timestamp: new Date().toISOString(),
 			};
 		}
 	}
@@ -313,14 +372,17 @@ Important: Use ONLY the actual data returned from the MCP tools. Do not use plac
 	/**
 	 * Extract key metrics from crypto data
 	 */
-	private extractMetrics(cryptoData: any) {
+	private extractMetrics(cryptoData: Record<string, unknown>) {
 		return {
 			price: cryptoData?.price || null,
 			galaxy_score: cryptoData?.galaxy_score || null,
 			alt_rank: cryptoData?.alt_rank || null,
 			social_dominance: cryptoData?.social_dominance || null,
 			market_cap: cryptoData?.market_cap || null,
-			volume_24h: cryptoData?.volume_24h || null
+			volume_24h: cryptoData?.volume_24h || null,
+			mentions: cryptoData?.mentions || null,
+			engagements: cryptoData?.engagements || cryptoData?.interactions || null,
+			creators: cryptoData?.creators || null,
 		};
 	}
 
@@ -353,7 +415,9 @@ Important: Use ONLY the actual data returned from the MCP tools. Do not use plac
 		});
 
 		if (!response.ok) {
-			throw new Error(`Gemini API error: ${response.status} ${response.statusText}`);
+			throw new Error(
+				`Gemini API error: ${response.status} ${response.statusText}`
+			);
 		}
 
 		return response.json();

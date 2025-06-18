@@ -223,7 +223,10 @@ export default function TradingIndex() {
 													</h4>
 													<div className='grid grid-cols-2 md:grid-cols-3 gap-4'>
 														{Object.entries(fetcher.data.analysis.key_metrics)
-															.filter(([, value]) => value !== null)
+															.filter(
+																([, value]) =>
+																	value !== null && value !== undefined
+															)
 															.map(([key, value]) => (
 																<div
 																	key={key}
@@ -234,8 +237,13 @@ export default function TradingIndex() {
 																	<div className='text-sm font-semibold mt-1'>
 																		{typeof value === 'number'
 																			? key.includes('price') ||
-																			  key.includes('cap')
+																			  key.includes('cap') ||
+																			  key.includes('volume')
 																				? `$${value.toLocaleString()}`
+																				: key.includes('mentions') ||
+																				  key.includes('engagements') ||
+																				  key.includes('creators')
+																				? `${value.toLocaleString()}`
 																				: value.toLocaleString()
 																			: value}
 																	</div>
@@ -250,20 +258,118 @@ export default function TradingIndex() {
 												<h4 className='text-lg font-semibold mb-3'>
 													AI Analysis
 												</h4>
-												<div className='p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg'>
-													<p className='text-sm leading-relaxed'>
-														{fetcher.data.analysis.reasoning}
-													</p>
-													{fetcher.data.analysis.ai_analysis &&
-														fetcher.data.analysis.ai_analysis !==
-															fetcher.data.analysis.reasoning && (
-															<div className='mt-3 pt-3 border-t border-blue-200 dark:border-blue-700'>
-																<p className='text-sm leading-relaxed'>
-																	{fetcher.data.analysis.ai_analysis}
-																</p>
-															</div>
-														)}
-												</div>
+												{/* Check if we have structured AI analysis */}
+												{fetcher.data.analysis.ai_analysis &&
+												typeof fetcher.data.analysis.ai_analysis === 'object' &&
+												fetcher.data.analysis.ai_analysis.summary ? (
+													<div className='space-y-4'>
+														{/* Summary */}
+														<div className='p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg'>
+															<h5 className='font-semibold text-blue-800 dark:text-blue-200 mb-2'>
+																Summary
+															</h5>
+															<p className='text-sm leading-relaxed'>
+																{fetcher.data.analysis.ai_analysis.summary}
+															</p>
+														</div>
+
+														{/* Pros and Cons */}
+														<div className='grid md:grid-cols-2 gap-4'>
+															{/* Pros */}
+															{fetcher.data.analysis.ai_analysis.pros &&
+																fetcher.data.analysis.ai_analysis.pros.length >
+																	0 && (
+																	<div className='p-4 bg-green-50 dark:bg-green-900/20 rounded-lg'>
+																		<h5 className='font-semibold text-green-800 dark:text-green-200 mb-3 flex items-center'>
+																			✅ Positives
+																		</h5>
+																		<ul className='space-y-2'>
+																			{fetcher.data.analysis.ai_analysis.pros.map(
+																				(pro, index) => (
+																					<li
+																						key={index}
+																						className='text-sm flex items-start'>
+																						<span className='text-green-600 mr-2'>
+																							•
+																						</span>
+																						<span>{pro}</span>
+																					</li>
+																				)
+																			)}
+																		</ul>
+																	</div>
+																)}
+
+															{/* Cons */}
+															{fetcher.data.analysis.ai_analysis.cons &&
+																fetcher.data.analysis.ai_analysis.cons.length >
+																	0 && (
+																	<div className='p-4 bg-red-50 dark:bg-red-900/20 rounded-lg'>
+																		<h5 className='font-semibold text-red-800 dark:text-red-200 mb-3 flex items-center'>
+																			⚠️ Risks
+																		</h5>
+																		<ul className='space-y-2'>
+																			{fetcher.data.analysis.ai_analysis.cons.map(
+																				(con, index) => (
+																					<li
+																						key={index}
+																						className='text-sm flex items-start'>
+																						<span className='text-red-600 mr-2'>
+																							•
+																						</span>
+																						<span>{con}</span>
+																					</li>
+																				)
+																			)}
+																		</ul>
+																	</div>
+																)}
+														</div>
+
+														{/* Key Factors */}
+														{fetcher.data.analysis.ai_analysis.key_factors &&
+															fetcher.data.analysis.ai_analysis.key_factors
+																.length > 0 && (
+																<div className='p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg'>
+																	<h5 className='font-semibold text-purple-800 dark:text-purple-200 mb-3'>
+																		🎯 Key Factors to Watch
+																	</h5>
+																	<ul className='space-y-2'>
+																		{fetcher.data.analysis.ai_analysis.key_factors.map(
+																			(factor, index) => (
+																				<li
+																					key={index}
+																					className='text-sm flex items-start'>
+																					<span className='text-purple-600 mr-2'>
+																						•
+																					</span>
+																					<span>{factor}</span>
+																				</li>
+																			)
+																		)}
+																	</ul>
+																</div>
+															)}
+													</div>
+												) : (
+													/* Fallback for simple text analysis */
+													<div className='p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg'>
+														<p className='text-sm leading-relaxed'>
+															{fetcher.data.analysis.reasoning}
+														</p>
+														{fetcher.data.analysis.ai_analysis &&
+															typeof fetcher.data.analysis.ai_analysis ===
+																'string' &&
+															fetcher.data.analysis.ai_analysis !==
+																fetcher.data.analysis.reasoning && (
+																<div className='mt-3 pt-3 border-t border-blue-200 dark:border-blue-700'>
+																	<p className='text-sm leading-relaxed'>
+																		{fetcher.data.analysis.ai_analysis}
+																	</p>
+																</div>
+															)}
+													</div>
+												)}
 											</div>
 
 											{/* Technical Details */}
