@@ -6,7 +6,11 @@
  *
  * Architecture:
  * 1. User queries for a coin (e.g., "BTC")
- * 2. Gemini AI decides which MCP tools to use
+ * 2. Gemini AI 4. CHART DATA:
+   - If you find price/time series data, include ONLY the last 12-20 data points
+   - Format as: [{"time": "2025-06-10 07:00", "close": 2675.51}, ...]
+   - Skip every 2-3 hours for better visualization
+   - Keep chart_data VERY small to prevent response truncationdes which MCP tools to use
  * 3. Gemini calls LunarCrush MCP tools to gather data
  * 4. Gemini processes all data and returns trading analysis
  */
@@ -37,7 +41,7 @@ export interface TradingAnalysis {
 		key_factors: string[];
 	};
 	timestamp: string;
-	chart_data?: [];
+	chart_data?: Array<{ date: string; price: number }>;
 }
 
 interface GeminiResponse {
@@ -136,8 +140,10 @@ Based on the available tools, decide which tools to call and with what parameter
 2. Social sentiment metrics
 3. Historical performance data
 4. Ranking and positioning data
-5. A chart of the last week's price history
+5. Get one week price historical time series data for charting purposes. Look only for the price metrics.
 6. Any other relevant data for trading analysis
+
+Prioritize getting data from the Topic_Time_Series tool for the one week price chart. The price chart is important. If you don't get data back in the response try a few different solutions to get the data (e.g. try the name of the coin and the symbol)
 
 Respond with a JSON array of tool calls in this exact format:
 [
@@ -285,9 +291,16 @@ Based on the above data from the MCP tools, provide a detailed trading analysis.
 3. POSITIONING DATA:
    - AltRank and market positioning
    - Relative performance vs other cryptocurrencies
-4. HISTORICAL PERFORMANCE:
+
+4. CHART DATA:
    - Price trends over the last week
-   - This will be used to create a chart
+   - Could be used to create a chart
+   - Could be under close instead of price
+
+4. CHART DATA:
+   - If you find price/time series data, include ONLY even hour time data points
+   - Format as: [{"time": "2025-06-10 07:00", "close": 2675.51}, ...]
+   - Keep chart_data small to prevent response truncation
 
 REQUIRED JSON RESPONSE FORMAT:
 {
@@ -312,7 +325,7 @@ REQUIRED JSON RESPONSE FORMAT:
     "cons": ["Risk factor 1", "Risk factor 2", "etc"],
     "key_factors": ["Important factor to monitor 1", "Important factor 2", "etc"]
   },
-  chart_data: []
+  "chart_data": [{"time": "2025-06-10 07:00", "close": 2675.51}]
 }
 
 IMPORTANT:
@@ -337,15 +350,29 @@ IMPORTANT:
 				throw new Error('No response from Gemini');
 			}
 
-			console.log('🤖 Gemini raw response:', text);
+			console.log(
+				'🤖 Gemini raw response:',
+				text
+			);
 
-			// Extract JSON from response
+			// Extract JSON from response with better handling
 			const jsonMatch = text.match(/\{[\s\S]*\}/);
 			if (!jsonMatch) {
 				throw new Error('No JSON found in Gemini response');
 			}
 
-			const analysis = JSON.parse(jsonMatch[0]);
+			let jsonText = jsonMatch[0];
+
+			// Handle truncated JSON by trying to fix common issues
+			if (!jsonText.endsWith('}')) {
+				// Find the last complete field before truncation
+				const lastCompleteField = jsonText.lastIndexOf('"}');
+				if (lastCompleteField > 0) {
+					jsonText = jsonText.substring(0, lastCompleteField + 2) + '}';
+				}
+			}
+
+			const analysis = JSON.parse(jsonText);
 
 			// Validate and format response
 			return {
@@ -357,8 +384,8 @@ IMPORTANT:
 				key_metrics: analysis.key_metrics || this.extractMetrics(cryptoData),
 				ai_analysis:
 					analysis.ai_analysis || analysis.reasoning || 'AI analysis completed',
-        timestamp: new Date().toISOString(),
-        chart_data: analysis.chart_data || [],
+				timestamp: new Date().toISOString(),
+				chart_data: this.transformChartData(analysis.chart_data || []),
 			};
 		} catch (error) {
 			console.error('❌ Error parsing Gemini response:', error);
@@ -372,8 +399,8 @@ IMPORTANT:
 				social_sentiment: 'neutral',
 				key_metrics: this.extractMetrics(cryptoData),
 				ai_analysis: 'Unable to complete full AI analysis. Please try again.',
-        timestamp: new Date().toISOString(),
-        chart_data: [],
+				timestamp: new Date().toISOString(),
+				chart_data: [],
 			};
 		}
 	}
@@ -391,9 +418,35 @@ IMPORTANT:
 			volume_24h: cryptoData?.volume_24h || null,
 			mentions: cryptoData?.mentions || null,
 			engagements: cryptoData?.engagements || cryptoData?.interactions || null,
-      creators: cryptoData?.creators || null,
-
+			creators: cryptoData?.creators || null,
 		};
+	}
+
+	/**
+	 * Transform chart data from LunarCrush format to PriceChart component format
+	 */
+	private transformChartData(
+		chartData: Array<{
+			time?: string;
+			date?: string;
+			close?: number;
+			price?: number;
+		}>
+	): Array<{ date: string; price: number }> {
+		if (!Array.isArray(chartData) || chartData.length === 0) {
+			return [];
+		}
+
+		// Transform and filter valid data points
+		const transformedData = chartData
+			.map((item) => ({
+				date: item.time || item.date || '',
+				price: item.close || item.price || 0,
+			}))
+			.filter((item) => item.date && item.price > 0)
+			.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+		return transformedData;
 	}
 
 	/**
@@ -419,7 +472,7 @@ IMPORTANT:
 					temperature: 0.7,
 					topK: 40,
 					topP: 0.95,
-					maxOutputTokens: 2048,
+					maxOutputTokens: 4096, // Increased to prevent truncation
 				},
 			}),
 		});
