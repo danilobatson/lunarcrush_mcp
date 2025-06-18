@@ -76,67 +76,189 @@ export default class GeminiAIService {
 	}
 
 	/**
-	 * Let Gemini AI orchestrate the analysis by deciding which MCP tools to use
+	 * Let Gemini AI orchestrate the analysis by discovering and using MCP tools
 	 */
 	private async orchestrateAnalysis(symbol: string): Promise<TradingAnalysis> {
-		// Step 1: Gather cryptocurrency data via MCP
-		console.log(`📊 Gathering ${symbol} data via LunarCrush MCP...`);
-		const cryptoData = await this.mcpService.getCryptocurrencyData(symbol);
+		// Step 1: Let Gemini discover available tools
+		console.log('🔍 Letting Gemini discover available MCP tools...');
+		const availableTools = await this.mcpService.listAvailableTools();
 		
-		// Step 2: Let Gemini analyze all the data
-		console.log(`🤖 Processing ${symbol} data with Gemini AI...`);
-		const analysisPrompt = this.createComprehensiveAnalysisPrompt(symbol, cryptoData);
-		const response = await this.callGemini(analysisPrompt);
+		// Step 2: Let Gemini decide which tools to use and how
+		console.log(`🤖 Letting Gemini choose tools for ${symbol} analysis...`);
+		const orchestrationPrompt = this.createOrchestrationPrompt(symbol, availableTools);
+		const orchestrationResponse = await this.callGemini(orchestrationPrompt);
 		
-		return this.parseAnalysisResponse(response, symbol, cryptoData);
+		// Step 3: Execute Gemini's tool choices to gather data
+		const gatheredData = await this.executeGeminiToolChoices(symbol, orchestrationResponse);
+		
+		// Step 4: Let Gemini analyze all gathered data
+		console.log(`📊 Gemini analyzing gathered data for ${symbol}...`);
+		const analysisPrompt = this.createAnalysisPrompt(symbol, gatheredData);
+		const analysisResponse = await this.callGemini(analysisPrompt);
+		
+		return this.parseAnalysisResponse(analysisResponse, symbol, gatheredData);
 	}
 
 	/**
-	 * Create comprehensive analysis prompt with all gathered data
+	 * Create orchestration prompt for Gemini to choose tools
 	 */
-	private createComprehensiveAnalysisPrompt(symbol: string, cryptoData: any): string {
+	private createOrchestrationPrompt(symbol: string, availableTools: any): string {
 		return `
-You are an expert cryptocurrency analyst. Analyze the following data for ${symbol.toUpperCase()} and provide a comprehensive trading recommendation.
+You are a cryptocurrency analyst. I need you to analyze ${symbol.toUpperCase()} using the available LunarCrush MCP tools.
 
-GATHERED DATA FROM LUNARCRUSH MCP:
-${JSON.stringify(cryptoData, null, 2)}
+AVAILABLE MCP TOOLS:
+${JSON.stringify(availableTools, null, 2)}
+
+TASK: Create a plan to gather comprehensive data for ${symbol.toUpperCase()} trading analysis.
+
+Based on the available tools, decide which tools to call and with what parameters to get:
+1. Current price and market data
+2. Social sentiment metrics
+3. Historical performance data
+4. Ranking and positioning data
+
+Respond with a JSON array of tool calls in this exact format:
+[
+  {
+    "tool": "tool_name",
+    "args": {"param": "value"},
+    "reason": "Why this tool call is needed"
+  }
+]
+
+Be specific with parameters. For example, if you need to find ${symbol} in a list first, plan that step.
+`;
+	}
+
+	/**
+	 * Execute Gemini's chosen tool calls
+	 */
+	private async executeGeminiToolChoices(symbol: string, orchestrationResponse: any): Promise<any> {
+		try {
+			const responseText = orchestrationResponse.candidates[0]?.content?.parts[0]?.text;
+			console.log('🤖 Gemini orchestration response:', responseText);
+
+			// Extract JSON array from response
+			const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+			if (!jsonMatch) {
+				console.log('⚠️ No JSON array found, using fallback tool calls');
+				return await this.executeFallbackToolCalls(symbol);
+			}
+
+			const toolCalls = JSON.parse(jsonMatch[0]);
+			const gatheredData: any = {
+				symbol: symbol.toUpperCase(),
+				toolResults: []
+			};
+
+			// Execute each tool call
+			for (const toolCall of toolCalls) {
+				try {
+					console.log(`🛠️ Executing: ${toolCall.tool} - ${toolCall.reason}`);
+					const result = await this.mcpService.callTool(toolCall.tool, toolCall.args);
+					gatheredData.toolResults.push({
+						tool: toolCall.tool,
+						args: toolCall.args,
+						reason: toolCall.reason,
+						result: result
+					});
+				} catch (error) {
+					console.error(`❌ Tool ${toolCall.tool} failed:`, error);
+					gatheredData.toolResults.push({
+						tool: toolCall.tool,
+						args: toolCall.args,
+						reason: toolCall.reason,
+						error: error instanceof Error ? error.message : 'Unknown error'
+					});
+				}
+			}
+
+			return gatheredData;
+		} catch (error) {
+			console.error('❌ Error executing tool choices:', error);
+			return await this.executeFallbackToolCalls(symbol);
+		}
+	}
+
+	/**
+	 * Fallback tool calls if orchestration fails
+	 */
+	private async executeFallbackToolCalls(symbol: string): Promise<any> {
+		console.log('🔄 Using fallback tool calls...');
+		const gatheredData: any = {
+			symbol: symbol.toUpperCase(),
+			toolResults: []
+		};
+
+		// Try common tools that should exist
+		const fallbackCalls = [
+			{ tool: 'cryptocurrencies', args: {}, reason: 'Get list of cryptocurrencies' },
+			{ tool: 'topic', args: { topic: symbol.toLowerCase() }, reason: 'Get topic data' }
+		];
+
+		for (const toolCall of fallbackCalls) {
+			try {
+				console.log(`🛠️ Fallback: ${toolCall.tool} - ${toolCall.reason}`);
+				const result = await this.mcpService.callTool(toolCall.tool, toolCall.args);
+				gatheredData.toolResults.push({
+					tool: toolCall.tool,
+					args: toolCall.args,
+					reason: toolCall.reason,
+					result: result
+				});
+			} catch (error) {
+				console.error(`❌ Fallback tool ${toolCall.tool} failed:`, error);
+			}
+		}
+
+		return gatheredData;
+	}
+
+	/**
+	 * Create analysis prompt with gathered data
+	 */
+	private createAnalysisPrompt(symbol: string, gatheredData: any): string {
+		return `
+You are an expert cryptocurrency analyst. Analyze the following data for ${symbol.toUpperCase()} gathered from LunarCrush MCP tools and provide a comprehensive trading recommendation.
+
+GATHERED DATA FROM MCP TOOLS:
+${JSON.stringify(gatheredData, null, 2)}
 
 ANALYSIS REQUIREMENTS:
-Based on the above data, provide a detailed trading analysis. Consider:
+Based on the above data from the MCP tools, provide a detailed trading analysis. Look for:
 
-1. SOCIAL SENTIMENT ANALYSIS:
-   - Social mentions, engagements, and dominance trends
-   - Galaxy Score (0-100) indicating social and market health
-   - AltRank positioning relative to other cryptocurrencies
+1. CURRENT MARKET DATA:
+   - Real current price (not demo data)
+   - Market cap and volume
+   - Recent performance metrics
 
-2. MARKET METRICS:
-   - Current price action and volume
-   - Market cap positioning
-   - Technical indicators if available
+2. SOCIAL SENTIMENT:
+   - Social mentions and engagement
+   - Galaxy Score and health indicators
+   - Community sentiment trends
 
-3. RISK ASSESSMENT:
-   - Social sentiment volatility
-   - Market positioning risks
-   - Overall confidence level
+3. POSITIONING DATA:
+   - AltRank and market positioning
+   - Relative performance vs other cryptocurrencies
 
 REQUIRED JSON RESPONSE FORMAT:
 {
   "recommendation": "BUY|SELL|HOLD",
   "confidence": 0-100,
-  "reasoning": "Detailed 3-4 sentence explanation of your analysis",
+  "reasoning": "Detailed explanation based on the MCP data gathered",
   "social_sentiment": "bullish|bearish|neutral",
   "key_metrics": {
-    "price": number or null,
-    "galaxy_score": number or null,
-    "alt_rank": number or null,
-    "social_dominance": number or null,
-    "market_cap": number or null,
-    "volume_24h": number or null
+    "price": "actual price from MCP data",
+    "galaxy_score": "score from data",
+    "alt_rank": "rank from data",
+    "social_dominance": "dominance from data",
+    "market_cap": "cap from data",
+    "volume_24h": "volume from data"
   },
-  "ai_analysis": "Comprehensive 2-3 paragraph analysis including social trends, market positioning, and future outlook"
+  "ai_analysis": "Comprehensive analysis based on the actual MCP tool results"
 }
 
-Be thorough in your analysis but concise in your reasoning. Focus on actionable insights.
+Important: Use ONLY the actual data returned from the MCP tools. Do not use placeholder or demo data.
 `;
 	}
 

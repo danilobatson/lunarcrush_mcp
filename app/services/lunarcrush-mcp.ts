@@ -291,6 +291,160 @@ class LunarCrushMCPService {
 	}
 
 	/**
+	 * List available tools from the MCP server
+	 */
+	async listTools(): Promise<any> {
+		try {
+			console.log('📋 Listing available MCP tools...');
+
+			const result = await this.makeRequest('tools/list');
+			console.log('✅ Available tools:', result);
+			return result;
+		} catch (error) {
+			console.error('❌ Error listing tools:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Get all cryptocurrencies data using MCP Cryptocurrencies tool
+	 */
+	async getCryptocurrencies(limit: number = 100): Promise<any> {
+		try {
+			console.log(`📊 Fetching cryptocurrencies data (limit: ${limit}) via MCP...`);
+
+			const result = await this.makeRequest('tools/call', {
+				name: 'Cryptocurrencies',
+				arguments: {
+					limit: limit,
+				},
+			});
+
+			console.log('✅ Cryptocurrencies data received');
+			return result;
+		} catch (error) {
+			console.error('❌ Error fetching cryptocurrencies:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Get topic data for a specific cryptocurrency using MCP Topic tool
+	 */
+	async getTopicData(symbol: string): Promise<any> {
+		try {
+			console.log(`📊 Fetching topic data for ${symbol} via MCP...`);
+
+			const result = await this.makeRequest('tools/call', {
+				name: 'Topic',
+				arguments: {
+					topic: symbol.toLowerCase(),
+				},
+			});
+
+			console.log(`✅ Topic data received for ${symbol}`);
+			return result;
+		} catch (error) {
+			console.error(`❌ Error fetching topic data for ${symbol}:`, error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Get time series data for a cryptocurrency using MCP Time Series tool
+	 */
+	async getTimeSeries(
+		symbol: string,
+		interval: string = '1d',
+		change: string = '1w'
+	): Promise<any> {
+		try {
+			console.log(`📈 Fetching time series data for ${symbol} via MCP...`);
+
+			const result = await this.makeRequest('tools/call', {
+				name: 'Time Series',
+				arguments: {
+					symbol: symbol.toLowerCase(),
+					interval: interval,
+					change: change,
+				},
+			});
+
+			console.log(`✅ Time series data received for ${symbol}`);
+			return result;
+		} catch (error) {
+			console.error(`❌ Error fetching time series for ${symbol}:`, error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Find a specific cryptocurrency in the cryptocurrencies list and get complete data
+	 */
+	async getComprehensiveCryptoData(symbol: string): Promise<any> {
+		try {
+			console.log(`🔍 Getting comprehensive data for ${symbol}...`);
+
+			// Step 1: Get all cryptocurrencies to find the exact symbol
+			const cryptosResult = await this.getCryptocurrencies(500);
+
+			// Step 2: Get topic data for social metrics
+			const topicResult = await this.getTopicData(symbol);
+
+			// Step 3: Get time series data for price trends
+			const timeSeriesResult = await this.getTimeSeries(symbol);
+
+			console.log(`✅ Comprehensive data gathered for ${symbol}`);
+
+			return {
+				cryptocurrencies: cryptosResult,
+				topic: topicResult,
+				timeSeries: timeSeriesResult,
+			};
+		} catch (error) {
+			console.error(`❌ Error getting comprehensive data for ${symbol}:`, error);
+			throw error;
+		}
+	}
+
+	/**
+	 * List all available MCP tools for Gemini to discover
+	 */
+	async listAvailableTools(): Promise<any> {
+		try {
+			console.log('🔍 Discovering available MCP tools...');
+
+			const result = await this.makeRequest('tools/list');
+
+			console.log('✅ Available tools:', JSON.stringify(result, null, 2));
+			return result;
+		} catch (error) {
+			console.error('❌ Error listing tools:', error);
+			throw error;
+		}
+	}
+
+	/**
+	 * Call any MCP tool dynamically (for Gemini to use)
+	 */
+	async callTool(toolName: string, args: any = {}): Promise<any> {
+		try {
+			console.log(`🛠️ Calling MCP tool: ${toolName} with args:`, args);
+
+			const result = await this.makeRequest('tools/call', {
+				name: toolName,
+				arguments: args,
+			});
+
+			console.log(`✅ Tool ${toolName} result:`, JSON.stringify(result, null, 2));
+			return result;
+		} catch (error) {
+			console.error(`❌ Error calling tool ${toolName}:`, error);
+			throw error;
+		}
+	}
+
+	/**
 	 * Clean up MCP connections
 	 */
 	disconnect(): void {
