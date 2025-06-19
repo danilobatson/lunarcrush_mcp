@@ -1,5 +1,4 @@
 // src/hooks/useGeminiMcp.js
-import { useState, useCallback } from 'react';
 import { useMcp } from 'use-mcp/react';
 
 const useMcpServer = ({ url, clientName, autoReconnect = true, config }) => {

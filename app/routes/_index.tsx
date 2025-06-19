@@ -71,7 +71,7 @@ function createOrchestrationPrompt(
 	availableTools: Record<string, unknown>
 ): string {
 	return `
-You are a cryptocurrency analyst. I need you to analyze ${symbol.toUpperCase()} using the available LunarCrush MCP tools.
+You are a cryptocurrency analyst. I need you to analyze ${symbol.toUpperCase()} using the available LunarCrush MCP tools. Use a MAX of four tools.
 
 AVAILABLE MCP TOOLS:
 ${JSON.stringify(availableTools, null, 2)}
@@ -84,16 +84,15 @@ Based on the available tools, decide which tools to call and with what parameter
 3. Historical performance data
 4. Ranking and positioning data
 5. Get one week price historical time series data for charting purposes. Look only for the price metrics.
-6. Any other relevant data for trading analysis
 
-Prioritize getting data from the Topic_Time_Series tool for the one week price chart. The price chart is important. If you don't get data back in the response try a few different solutions to get the data (e.g. try the name of the coin and the symbol)
+Prioritize getting data for the one week price chart. The price chart is important. If you don't get data back in the response try a few different solutions to get the data (e.g. try the name of the coin FIRST then try the symbol)
 
 Respond with a JSON array of tool calls in this exact format:
 [
 {
   "tool": "tool_name",
   "args": {"param": "value"},
-  "reason": "Why this tool call is needed"
+  "reason": "Short reason why this tool call is needed"
 }
 ]
 
@@ -122,33 +121,34 @@ async function executeGeminiToolChoices(
 		}
 
 		const toolCalls = JSON.parse(jsonMatch[0]);
-		const gatheredData: Record<string, unknown> = {
+		const gatheredData = {
 			symbol: symbol.toUpperCase(),
 			toolResults: [],
 		};
 
-		// Execute each tool call
-		for (const toolCall of toolCalls) {
+		// Execute tool calls concurrently with Promise.all
+		const toolPromises = toolCalls.map(async (toolCall) => {
 			try {
 				console.log(`🛠️ Executing: ${toolCall.tool} - ${toolCall.reason}`);
 				const result = await callTool(toolCall.tool, toolCall.args);
-				gatheredData.toolResults.push({
+				return {
 					tool: toolCall.tool,
 					args: toolCall.args,
 					reason: toolCall.reason,
-					result: result,
-				});
+					result,
+				};
 			} catch (error) {
 				console.error(`❌ Tool ${toolCall.tool} failed:`, error);
-				gatheredData.toolResults.push({
+				return {
 					tool: toolCall.tool,
 					args: toolCall.args,
 					reason: toolCall.reason,
 					error: error instanceof Error ? error.message : 'Unknown error',
-				});
+				};
 			}
-		}
+		});
 
+		gatheredData.toolResults = await Promise.all(toolPromises);
 		return gatheredData;
 	} catch (error) {
 		console.error('❌ Error executing tool choices:', error);
@@ -161,7 +161,7 @@ function createAnalysisPrompt(
 	gatheredData: Record<string, unknown>
 ): string {
 	return `
-You are an expert cryptocurrency analyst. Analyze the following data for ${symbol.toUpperCase()} gathered from LunarCrush MCP tools and provide a comprehensive trading recommendation.
+You are an expert cryptocurrency analyst. Analyze the following data for ${symbol.toUpperCase()} gathered from LunarCrush MCP tools and provide a comprehensive trading recommendation. Keep it short for faster response times.
 
 GATHERED DATA FROM MCP TOOLS:
 ${JSON.stringify(gatheredData, null, 2)}
@@ -187,8 +187,6 @@ Based on the above data from the MCP tools, provide a detailed trading analysis.
  - Price trends over the last week
  - Could be used to create a chart
  - Could be under close instead of price
-
-4. CHART DATA:
  - If you find price/time series data, include ONLY even hour time data points
  - Format as: [{"time": "2025-06-10 07:00", "close": 2675.51}, ...]
  - Keep chart_data small to prevent response truncation
@@ -222,7 +220,7 @@ Based on the above data from the MCP tools, provide a detailed trading analysis.
 
 IMPORTANT:
 - Use ONLY actual data from the MCP tools, not placeholder values
-- Make the analysis beginner-friendly and educational
+- Make the analysis beginner-friendly, concise, and educational
 - Focus on explaining WHY the recommendation is made
 - Extract real metrics from the gathered data
 - Do not break JSON response format instructed above
