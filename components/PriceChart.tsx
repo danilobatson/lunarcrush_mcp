@@ -74,33 +74,7 @@ export default function PriceChart({ data, symbol }: PriceChartProps) {
 						Interactive price movement visualization
 					</p>
 				</div>
-				<div className='text-right'>
-					<div className='text-3xl font-bold text-white mb-1'>
-						$
-						{lastPrice.toLocaleString(undefined, {
-							minimumFractionDigits: 2,
-							maximumFractionDigits: 2,
-						})}
-					</div>
-					<div className='flex items-center gap-2'>
-						<div
-							className={`px-3 py-1 rounded-full text-sm font-bold flex items-center gap-1 ${
-								isPositive
-									? 'bg-green-500/20 text-green-400 border border-green-500/30'
-									: 'bg-red-500/20 text-red-400 border border-red-500/30'
-							}`}>
-							<span className={isPositive ? '↗' : '↘'}></span>
-							{isPositive ? '+' : ''}
-							{priceChangePercent.toFixed(2)}%
-						</div>
-						<div
-							className={`text-sm font-medium ${
-								isPositive ? 'text-green-400' : 'text-red-400'
-							}`}>
-							({isPositive ? '+' : ''}${priceChange.toFixed(2)})
-						</div>
-					</div>
-				</div>
+				
 			</div>
 
 			{/* Enhanced Chart */}

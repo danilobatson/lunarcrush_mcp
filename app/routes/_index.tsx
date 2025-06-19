@@ -38,7 +38,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 
 async function geminiFlashResponse(ai, contents) {
 	return await ai.models.generateContent({
-		model: 'gemini-2.5-flash',
+		model: 'gemini-2.0-flash-lite',
 		contents: contents,
 	});
 }
@@ -187,7 +187,7 @@ Based on the above data from the MCP tools, provide a detailed trading analysis.
  - Price trends over the last week
  - Could be used to create a chart
  - Could be under close instead of price
- - If you find price/time series data, include ONLY even hour time data points
+ - If you find price/time series data, include ONLY 12AM and 12PM time data points
  - Format as: [{"time": "2025-06-10 07:00", "close": 2675.51}, ...]
  - Keep chart_data small to prevent response truncation
 
