@@ -462,9 +462,9 @@ export default function TradingIndex() {
 						next >= progressSteps.length - 1 ? progressSteps.length - 1 : next;
 
 					// Update progress based on step completion
-					// Each step represents equal progress up to 95%
+					// Each step represents equal progress up to 90%
 					const progressByStep = Math.round(
-						(finalStep + 1) * (95 / progressSteps.length)
+						(finalStep + 1) * (90 / progressSteps.length)
 					);
 					setProgressPercent(progressByStep);
 
