@@ -11,6 +11,8 @@
     "typecheck": "tsc"
   },
   "dependencies": {
+    "@google/genai": "^1.5.1",
+    "@google/generative-ai": "^0.24.1",
     "@heroui/button": "2.2.21",
     "@heroui/card": "^2.2.20",
     "@heroui/chip": "^2.2.17",
@@ -19,6 +21,7 @@
     "@heroui/kbd": "2.2.17",
     "@heroui/link": "2.2.18",
     "@heroui/navbar": "2.2.19",
+    "@heroui/progress": "^2.2.17",
     "@heroui/snippet": "2.2.22",
     "@heroui/switch": "2.2.19",
     "@heroui/system": "2.4.17",
@@ -30,7 +33,10 @@
     "@remix-run/react": "^2.15.1",
     "@remix-run/serve": "^2.15.1",
     "clsx": "^2.1.1",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
     "framer-motion": "11.18.2",
+    "http-proxy-middleware": "^3.0.5",
     "isbot": "^4.1.0",
     "next-themes": "^0.4.4",
     "process": "^0.11.10",
@@ -38,7 +44,8 @@
     "react-dom": "18.3.1",
     "recharts": "^2.15.3",
     "remix-utils": "^8.0.0",
-    "tailwind-variants": "^0.3.0"
+    "tailwind-variants": "^0.3.0",
+    "use-mcp": "^0.0.9"
   },
   "devDependencies": {
     "@remix-run/dev": "^2.15.1",
@@ -47,6 +54,7 @@
     "@typescript-eslint/eslint-plugin": "^6.7.4",
     "@typescript-eslint/parser": "^6.7.4",
     "autoprefixer": "^10.4.19",
+    "concurrently": "^9.1.2",
     "eslint": "^8.38.0",
     "eslint-import-resolver-typescript": "^3.6.1",
     "eslint-plugin-import": "^2.28.1",
