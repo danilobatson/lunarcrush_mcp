@@ -1,4 +1,4 @@
-# 🌙 LunarCrush MCP Trading Terminal
+# 🌙 LunarCrush MCP AI Trading
 
 > **Intelligent crypto trading terminal powered by LunarCrush social intelligence and Google Gemini AI**
 
@@ -597,7 +597,7 @@ const aiAnalysisMessages = [
 
 ### Dependencies
 - **@remix-run/react**: ^2.15.1
-- **@heroui/system**: ^2.4.17  
+- **@heroui/system**: ^2.4.17
 - **react**: 18.3.1
 - **tailwindcss**: Latest
 - **typescript**: Latest
@@ -636,7 +636,7 @@ This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) 
 ## 🙏 Acknowledgments
 
 - **[LunarCrush](https://lunarcrush.com/)** - Social intelligence data
-- **[Google Gemini](https://ai.google.dev/)** - AI analysis capabilities  
+- **[Google Gemini](https://ai.google.dev/)** - AI analysis capabilities
 - **[Remix](https://remix.run/)** - Full-stack web framework
 - **[HeroUI](https://heroui.com/)** - Beautiful React components
 - **[Tailwind CSS](https://tailwindcss.com/)** - Utility-first CSS framework
