@@ -14,6 +14,9 @@ import PriceChart from '../../components/PriceChart';
 import { useMcp } from 'use-mcp/react';
 import { GoogleGenAI } from '@google/genai';
 import useMcpServer from '../../hooks/useMcpServer';
+import NodeCache from 'node-cache';
+
+const myCache = new NodeCache({ stdTTL: 1200, checkperiod: 120 });
 
 export const meta: MetaFunction = () => {
 	return [
@@ -309,14 +312,12 @@ export default function TradingIndex() {
 	const [analysis, setAnalysis] = useState(null);
 	const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-
 	const { state, tools, callTool } = useMcpServer({
 		url: `https://lunarcrush.ai/sse?key=${env.LUNARCRUSH_API_KEY}`,
 		clientName: 'LunarCrush MCP SSE',
 		autoReconnect: true,
 		timeout: 15000, // 15 second timeout
 	});
-
 
 	// Add a timeout effect to handle stuck connections
 	useEffect(() => {
@@ -372,19 +373,30 @@ export default function TradingIndex() {
 	const ai = new GoogleGenAI({ apiKey: env.GOOGLE_GEMINI_API_KEY });
 
 	async function main(symbol = 'BTC') {
+		if (myCache.has(symbol.toUpperCase())) {
+			console.log(`😌 Using cached analysis for ${symbol}...`);
+			return myCache.get(symbol.toUpperCase());
+		}
 		// Step 1: Let Gemini decide which tools to use and how
-		console.log(`🤖 Letting Gemini choose tools for ${symbol} analysis...`);
+		let chooseToolsResponse;
 
-		const chooseToolsPrompt = createOrchestrationPrompt(symbol, tools);
+		if (!myCache.has('useTools')) {
+			console.log(
+				`🤖 Letting Gemini choose tools for ${symbol} analysis...`
+			);
 
-		const chooseToolsResponse = await geminiFlashResponse(
-			ai,
-			chooseToolsPrompt
-		);
+			const chooseToolsPrompt = createOrchestrationPrompt(symbol, tools);
+
+			chooseToolsResponse = await geminiFlashResponse(ai, chooseToolsPrompt);
+			console.log('🤖 Gemini orchestrator response:', chooseToolsResponse);
+
+			myCache.set('useTools', chooseToolsResponse, 1200);
+		} else {
+			console.log(`😌 Using cached tools for ${symbol} analysis...`);
+			chooseToolsResponse = myCache.get('useTools');
+		}
 
 		// Step 2: Execute Gemini's tool choices to gather data
-
-		console.log('🤖 Gemini orchestrator response:', chooseToolsResponse);
 
 		const gatheredData = await executeGeminiToolChoices(
 			symbol,
@@ -402,7 +414,16 @@ export default function TradingIndex() {
 
 		console.log('🤖 Gemini final analysis response:', analysisResponse);
 
-		return parseAnalysisResponse(analysisResponse, symbol, gatheredData);
+		const finalResponse = parseAnalysisResponse(
+			analysisResponse,
+			symbol,
+			gatheredData
+		);
+
+		myCache.set(symbol.toUpperCase(), finalResponse, 300);
+		console.log('🤖 Final analysis cached for:', symbol.toUpperCase());
+
+		return finalResponse;
 	}
 
 	// Handle progress animation when loading starts
