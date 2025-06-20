@@ -1,21 +1,19 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy } from 'react';
 import { useLoaderData } from '@remix-run/react';
 import {
 	json,
 	type MetaFunction,
-	ActionFunctionArgs,
-	LoaderFunctionArgs,
+	// ActionFunctionArgs,
+	// LoaderFunctionArgs,
 } from '@remix-run/node';
 import { Input } from '@heroui/input';
 import { Button } from '@heroui/button';
 import { Card, CardBody } from '@heroui/card';
 import { Chip } from '@heroui/chip';
-import PriceChart from '../../components/PriceChart';
-import { useMcp } from 'use-mcp/react';
 import { GoogleGenAI } from '@google/genai';
 import useMcpServer from '../../hooks/useMcpServer';
 import NodeCache from 'node-cache';
-import { lazy } from 'react';
+import type { GeminiResponse, TradingAnalysis, ToolCall, McpTool, ToolResult } from '../../types';
 
 
 const ChartComponent = lazy(() => import('../../components/PriceChart'));
@@ -33,7 +31,7 @@ export const meta: MetaFunction = () => {
 	];
 };
 
-export async function loader({ request }: LoaderFunctionArgs) {
+export async function loader() {
 	return json({
 		message: 'Trading terminal loaded successfully',
 		env: {
@@ -43,7 +41,7 @@ export async function loader({ request }: LoaderFunctionArgs) {
 	});
 }
 
-async function geminiFlashResponse(ai, contents) {
+async function geminiFlashResponse(ai: GoogleGenAI, contents: string): Promise<GeminiResponse> {
 	return await ai.models.generateContent({
 		model: 'gemini-2.0-flash-lite',
 		contents: contents,
@@ -75,7 +73,7 @@ function transformChartData(
 
 function createOrchestrationPrompt(
 	symbol: string,
-	availableTools: Record<string, unknown>
+	availableTools: Record<string, McpTool>
 ): string {
 	return `
 You are a cryptocurrency analyst. I need you to analyze ${symbol.toUpperCase()} using the available LunarCrush MCP tools. Use a MAX of four tools.
@@ -117,25 +115,39 @@ async function executeGeminiToolChoices(
 ): Promise<Record<string, unknown>> {
   console.time(`ToolExecution for ${symbol}`);
 	try {
-		const responseText =
-			orchestrationResponse.candidates[0]?.content?.parts[0]?.text;
+		const responseText = 
+			orchestrationResponse.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
 		console.log('🤖 Gemini orchestration response:', responseText);
 
 		// Extract JSON array from response
-		const jsonMatch = responseText.match(/\[[\s\S]*\]/);
+		const jsonMatch = responseText?.match(/\[[\s\S]*\]/);
 		if (!jsonMatch) {
-			console.log('⚠️ No JSON array found, using fallback tool calls');
-			return await this.executeFallbackToolCalls(symbol);
+			console.log('⚠️ No JSON array found, using fallback');
+			console.timeEnd(`ToolExecution for ${symbol}`);
+			return {
+				symbol: symbol.toUpperCase(),
+				toolResults: [],
+				error: 'No tool calls found in response'
+			};
 		}
 
-		const toolCalls = JSON.parse(jsonMatch[0]);
-		const gatheredData = {
+		const toolCalls: ToolCall[] = JSON.parse(jsonMatch[0]);
+		const gatheredData: {
+			symbol: string;
+			toolResults: Array<{
+				tool: string;
+				args: Record<string, unknown>;
+				reason: string;
+				result?: unknown;
+				error?: string;
+			}>;
+		} = {
 			symbol: symbol.toUpperCase(),
 			toolResults: [],
 		};
 
 		// Execute tool calls concurrently with Promise.all
-		const toolPromises = toolCalls.map(async (toolCall) => {
+		const toolPromises = toolCalls.map(async (toolCall: ToolCall) => {
       try {
         // Check if tool is Cryptocurrencies and cached
 				if (
@@ -181,13 +193,17 @@ async function executeGeminiToolChoices(
 			}
 		});
 
-    gatheredData.toolResults = await Promise.all(toolPromises);
+    gatheredData.toolResults = await Promise.all(toolPromises) as ToolResult[];
     console.timeEnd(`ToolExecution for ${symbol}`);
 		return gatheredData;
 	} catch (error) {
     console.error('❌ Error executing tool choices:', error);
     console.timeEnd(`ToolExecution for ${symbol}`);
-		return await this.executeFallbackToolCalls(symbol);
+		return {
+			symbol: symbol.toUpperCase(),
+			toolResults: [],
+			error: error instanceof Error ? error.message : 'Unknown error'
+		};
   }
 }
 
@@ -268,7 +284,7 @@ function parseAnalysisResponse(
 	cryptoData: Record<string, unknown>
 ): TradingAnalysis {
 	try {
-		const text = response.candidates[0]?.content?.parts[0]?.text;
+		const text = response.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
 		if (!text) {
 			throw new Error('No response from Gemini');
 		}
@@ -341,14 +357,14 @@ export default function TradingIndex() {
 	const [subStepMessage, setSubStepMessage] = useState('');
 
 	// State for analysis results
-	const [analysis, setAnalysis] = useState(null);
+	const [analysis, setAnalysis] = useState<TradingAnalysis | null>(null);
 	const [isAnalyzing, setIsAnalyzing] = useState(false);
 
 	const { state, tools, callTool } = useMcpServer({
 		url: `https://lunarcrush.ai/sse?key=${env.LUNARCRUSH_API_KEY}`,
 		clientName: 'LunarCrush MCP SSE',
 		autoReconnect: true,
-		timeout: 15000, // 15 second timeout
+		config: {},
 	});
 
 	// Add a timeout effect to handle stuck connections
@@ -404,11 +420,12 @@ export default function TradingIndex() {
 	];
 	const ai = new GoogleGenAI({ apiKey: env.GOOGLE_GEMINI_API_KEY });
 
-  async function main(symbol = 'BTC') {
+  async function main(symbol = 'BTC'): Promise<TradingAnalysis> {
     console.time(`Analysis for ${symbol}`);
 		if (myCache.has(symbol.toUpperCase())) {
 			console.log(`😌 Using cached analysis for ${symbol}...`);
-			return myCache.get(symbol.toUpperCase());
+			const cached = myCache.get(symbol.toUpperCase()) as TradingAnalysis | undefined;
+			if (cached) return cached;
 		}
 		// Step 1: Let Gemini decide which tools to use and how
 		let chooseToolsResponse;
@@ -418,7 +435,7 @@ export default function TradingIndex() {
 				`🤖 Letting Gemini choose tools for ${symbol} analysis...`
 			);
 
-			const chooseToolsPrompt = createOrchestrationPrompt(symbol, tools);
+			const chooseToolsPrompt = createOrchestrationPrompt(symbol, tools as unknown as Record<string, McpTool>);
 
 			chooseToolsResponse = await geminiFlashResponse(ai, chooseToolsPrompt);
 			console.log('🤖 Gemini orchestrator response:', chooseToolsResponse);
@@ -433,7 +450,7 @@ export default function TradingIndex() {
 
 		const gatheredData = await executeGeminiToolChoices(
 			symbol,
-			chooseToolsResponse,
+			chooseToolsResponse as GeminiResponse,
 			callTool
 		);
 
@@ -631,6 +648,8 @@ export default function TradingIndex() {
 					cons: ['Technical error occurred'],
 					key_factors: [],
 				},
+				timestamp: new Date().toISOString(),
+				chart_data: [],
 			});
 		} finally {
 			// Always stop analyzing state
@@ -956,7 +975,7 @@ export default function TradingIndex() {
 															Bullish Factors
 														</h5>
 														<ul className='space-y-2'>
-															{analysis.ai_analysis.pros.map((pro, index) => (
+															{analysis.ai_analysis.pros.map((pro: string, index: number) => (
 																<li
 																	key={index}
 																	className='text-slate-300 text-sm flex items-start gap-2'>
@@ -976,7 +995,7 @@ export default function TradingIndex() {
 															Risk Factors
 														</h5>
 														<ul className='space-y-2'>
-															{analysis.ai_analysis.cons.map((con, index) => (
+															{analysis.ai_analysis.cons.map((con: string, index: number) => (
 																<li
 																	key={index}
 																	className='text-slate-300 text-sm flex items-start gap-2'>
@@ -996,8 +1015,8 @@ export default function TradingIndex() {
 														Key Factors to Monitor
 													</h5>
 													<div className='flex flex-wrap gap-2'>
-														{analysis.ai_analysis.key_factors.map(
-															(factor, index) => (
+							{analysis.ai_analysis.key_factors.map(
+								(factor: string, index: number) => (
 																<Chip
 																	key={index}
 																	variant='flat'
@@ -1089,7 +1108,7 @@ export default function TradingIndex() {
 																{key.replace(/_/g, ' ')}
 															</span>
 															<span className='text-white font-semibold text-sm'>
-																{formatValue(key, value)}
+																{formatValue(key, value as string | number)}
 															</span>
 														</div>
 													);

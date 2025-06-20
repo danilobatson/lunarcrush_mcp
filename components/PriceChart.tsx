@@ -45,14 +45,14 @@ export default function PriceChart({ data, symbol }: PriceChartProps) {
 		validData.length > 20
 			? validData.filter(
 					(_, index) => index % Math.ceil(validData.length / 20) === 0
-			  )
+			)
 			: validData;
 
 	// Calculate price change for styling
 	const firstPrice = optimizedData[0]?.price || 0;
 	const lastPrice = optimizedData[optimizedData.length - 1]?.price || 0;
 	const priceChange = lastPrice - firstPrice;
-	const priceChangePercent = firstPrice ? (priceChange / firstPrice) * 100 : 0;
+	// const priceChangePercent = firstPrice ? (priceChange / firstPrice) * 100 : 0;
 	const isPositive = priceChange >= 0;
 
 	// Dynamic color based on price trend
@@ -74,7 +74,7 @@ export default function PriceChart({ data, symbol }: PriceChartProps) {
 						Interactive price movement visualization
 					</p>
 				</div>
-				
+
 			</div>
 
 			{/* Enhanced Chart */}
