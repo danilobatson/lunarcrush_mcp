@@ -651,8 +651,12 @@ export default function TradingIndex() {
 								<span className='text-white font-bold text-sm'>LC</span>
 							</div>
 							<div>
-								<h1 className='text-xl font-bold text-white'>LunarCrush AI</h1>
-								<p className='text-xs text-slate-400'>Trading Terminal</p>
+								<h1 className='text-xl font-bold text-white'>
+									AI Trading Agent
+								</h1>
+								<p className='text-xs text-slate-400'>
+									Powered by the LunarCrush MCP & Google Gemini
+								</p>
 							</div>
 						</div>
 						<div className='flex items-center gap-2'>
@@ -1179,7 +1183,7 @@ export default function TradingIndex() {
 								and Google Gemini AI.
 							</p>
 							<a
-								href='https://github.com/yourusername/lunarcrush-mcp'
+								href='https://github.com/danilobatson/lunarcrush_mcp'
 								target='_blank'
 								rel='noopener noreferrer'
 								className='inline-flex items-center gap-2 text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors'>
@@ -1248,12 +1252,12 @@ export default function TradingIndex() {
 									Google Gemini - AI Analysis
 								</a>
 								<a
-									href='https://modelcontextprotocol.io/'
+									href='https://github.com/modelcontextprotocol/use-mcp'
 									target='_blank'
 									rel='noopener noreferrer'
 									className='flex items-center gap-2 text-slate-400 hover:text-white text-sm transition-colors'>
 									<span className='w-2 h-2 bg-purple-400 rounded-full'></span>
-									MCP - Protocol Integration
+									React hook MCP: use-mcp
 								</a>
 								<a
 									href='https://vite.dev/'
@@ -1271,7 +1275,7 @@ export default function TradingIndex() {
 							<h4 className='text-white font-bold mb-4'>Resources</h4>
 							<div className='space-y-3'>
 								<a
-									href='https://lunarcrush.com/developers/api/endpoints'
+									href='https://lunarcrush.com/about/api'
 									target='_blank'
 									rel='noopener noreferrer'
 									className='flex items-center gap-2 text-slate-400 hover:text-white text-sm transition-colors'>
@@ -1287,12 +1291,12 @@ export default function TradingIndex() {
 									Gemini AI Documentation
 								</a>
 								<a
-									href='https://modelcontextprotocol.io/docs'
+									href='https://vercel.com/'
 									target='_blank'
 									rel='noopener noreferrer'
 									className='flex items-center gap-2 text-slate-400 hover:text-white text-sm transition-colors'>
 									<span className='w-2 h-2 bg-purple-400 rounded-full'></span>
-									MCP Documentation
+									Vercel - Deployment
 								</a>
 								<a
 									href='https://remix.run/docs'
@@ -1310,8 +1314,8 @@ export default function TradingIndex() {
 					<div className='pt-8 border-t border-slate-700/30'>
 						<div className='flex flex-col md:flex-row items-center justify-between gap-4'>
 							<div className='text-slate-400 text-sm'>
-								© 2025 LunarCrush AI Trading Terminal. Built for demonstration
-								purposes.
+								© 2025 LunarCrush MCP Powered AI Trading Agent. Built for
+								demonstration purposes.
 							</div>
 							<div className='flex items-center gap-1 text-sm text-slate-400'>
 								<span>Powered by:</span>
@@ -1332,11 +1336,11 @@ export default function TradingIndex() {
 								</a>
 								<span>•</span>
 								<a
-									href='https://modelcontextprotocol.io/'
+									href='https://danilobatson.github.io/'
 									target='_blank'
 									rel='noopener noreferrer'
 									className='text-purple-400 hover:text-purple-300 transition-colors'>
-									MCP
+									Developer Portfolio
 								</a>
 							</div>
 						</div>
