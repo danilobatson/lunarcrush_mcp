@@ -15,6 +15,10 @@ import { useMcp } from 'use-mcp/react';
 import { GoogleGenAI } from '@google/genai';
 import useMcpServer from '../../hooks/useMcpServer';
 import NodeCache from 'node-cache';
+import { lazy } from 'react';
+
+
+const ChartComponent = lazy(() => import('../../components/PriceChart'));
 
 const myCache = new NodeCache({ stdTTL: 1200, checkperiod: 120 });
 
@@ -111,6 +115,7 @@ async function executeGeminiToolChoices(
 		args: Record<string, unknown>
 	) => Promise<unknown>
 ): Promise<Record<string, unknown>> {
+  console.time(`ToolExecution for ${symbol}`);
 	try {
 		const responseText =
 			orchestrationResponse.candidates[0]?.content?.parts[0]?.text;
@@ -151,12 +156,14 @@ async function executeGeminiToolChoices(
 			}
 		});
 
-		gatheredData.toolResults = await Promise.all(toolPromises);
+    gatheredData.toolResults = await Promise.all(toolPromises);
+    console.timeEnd(`ToolExecution for ${symbol}`);
 		return gatheredData;
 	} catch (error) {
-		console.error('❌ Error executing tool choices:', error);
+    console.error('❌ Error executing tool choices:', error);
+    console.timeEnd(`ToolExecution for ${symbol}`);
 		return await this.executeFallbackToolCalls(symbol);
-	}
+  }
 }
 
 function createAnalysisPrompt(
@@ -372,7 +379,8 @@ export default function TradingIndex() {
 	];
 	const ai = new GoogleGenAI({ apiKey: env.GOOGLE_GEMINI_API_KEY });
 
-	async function main(symbol = 'BTC') {
+  async function main(symbol = 'BTC') {
+    console.time(`Analysis for ${symbol}`);
 		if (myCache.has(symbol.toUpperCase())) {
 			console.log(`😌 Using cached analysis for ${symbol}...`);
 			return myCache.get(symbol.toUpperCase());
@@ -422,7 +430,7 @@ export default function TradingIndex() {
 
 		myCache.set(symbol.toUpperCase(), finalResponse, 300);
 		console.log('🤖 Final analysis cached for:', symbol.toUpperCase());
-
+    console.timeEnd(`Analysis for ${symbol}`);
 		return finalResponse;
 	}
 
@@ -880,7 +888,7 @@ export default function TradingIndex() {
 							{analysis.chart_data && analysis.chart_data.length > 0 && (
 								<Card className='bg-slate-800/50 border-slate-700/50 backdrop-blur-xl'>
 									<CardBody className='p-6'>
-										<PriceChart
+										<ChartComponent
 											data={analysis.chart_data}
 											symbol={analysis.symbol}
 										/>
