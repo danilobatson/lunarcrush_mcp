@@ -92,7 +92,7 @@ Based on the available tools, decide which tools to call and with what parameter
 4. Ranking and positioning data
 5. Get one week price historical time series data for charting purposes. Look only for the price metrics.
 
-Prioritize getting data for the one week price chart. The price chart is important. If you don't get data back in the response try a few different solutions to get the data (e.g. try the name of the coin FIRST then try the symbol)
+Prioritize getting data for the one week price chart. The price chart is important. If you don't get data back in the response try a few different solutions to get the data (e.g. try the name of the coin FIRST then try the symbol). When using the Cryptocurrencies tool it should have no limit but sorted by market cap.
 
 Respond with a JSON array of tool calls in this exact format:
 [
@@ -136,9 +136,34 @@ async function executeGeminiToolChoices(
 
 		// Execute tool calls concurrently with Promise.all
 		const toolPromises = toolCalls.map(async (toolCall) => {
-			try {
+      try {
+        // Check if tool is Cryptocurrencies and cached
+				if (
+					toolCall.tool === 'Cryptocurrencies' &&
+					myCache.has('Cryptocurrencies')
+				) {
+					console.log(`😌 Using cached: ${toolCall.tool} - ${toolCall.reason}`);
+					return myCache.get('Cryptocurrencies');
+        }
+
 				console.log(`🛠️ Executing: ${toolCall.tool} - ${toolCall.reason}`);
 				const result = await callTool(toolCall.tool, toolCall.args);
+
+        // Cache the result if it's the Cryptocurrencies tool
+				if (toolCall.tool === 'Cryptocurrencies') {
+					console.log(`🗃️ Caching result for: ${toolCall.tool}`);
+					myCache.set(
+						'Cryptocurrencies',
+						{
+							tool: toolCall.tool,
+							args: toolCall.args,
+							reason: toolCall.reason,
+							result,
+						},
+						180
+					);
+				}
+
 				return {
 					tool: toolCall.tool,
 					args: toolCall.args,
@@ -428,7 +453,7 @@ export default function TradingIndex() {
 			gatheredData
 		);
 
-		myCache.set(symbol.toUpperCase(), finalResponse, 300);
+		myCache.set(symbol.toUpperCase(), finalResponse, 180);
 		console.log('🤖 Final analysis cached for:', symbol.toUpperCase());
     console.timeEnd(`Analysis for ${symbol}`);
 		return finalResponse;
